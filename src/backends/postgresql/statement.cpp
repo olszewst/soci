@@ -7,9 +7,9 @@
 
 #define SOCI_POSTGRESQL_SOURCE
 #include "soci-postgresql.h"
-#include "error.h"
 #include <soci-platform.h>
 #include <libpq/libpq-fs.h> // libpq
+#include <cassert>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -18,7 +18,9 @@
 #include <sstream>
 
 #ifdef SOCI_POSTGRESQL_NOPARAMS
+#ifndef SOCI_POSTGRESQL_NOBINDBYNAME
 #define SOCI_POSTGRESQL_NOBINDBYNAME
+#endif // SOCI_POSTGRESQL_NOBINDBYNAME
 #endif // SOCI_POSTGRESQL_NOPARAMS
 
 #ifdef _MSC_VER
@@ -27,20 +29,32 @@
 
 using namespace soci;
 using namespace soci::details;
-using namespace soci::details::postgresql;
 
 postgresql_statement_backend::postgresql_statement_backend(
     postgresql_session_backend &session)
-     : session_(session), result_(NULL), justDescribed_(false),
-       hasIntoElements_(false), hasVectorIntoElements_(false),
-       hasUseElements_(false), hasVectorUseElements_(false)
+     : session_(session)
+     , rowsAffectedBulk_(-1LL), justDescribed_(false)
+     , hasIntoElements_(false), hasVectorIntoElements_(false)
+     , hasUseElements_(false), hasVectorUseElements_(false)
 {
 }
 
 postgresql_statement_backend::~postgresql_statement_backend()
 {
     if (statementName_.empty() == false)
-        session_.deallocate_prepared_statement(statementName_);
+    {
+        try
+        {
+            session_.deallocate_prepared_statement(statementName_);
+        }
+        catch (...)
+        {
+            // Don't allow exceptions to escape from dtor. Suppressing them is
+            // not ideal, but terminating the program, as would happen if we're
+            // already unwinding the stack because of a previous exception,
+            // would be even worse.
+        }
+    }
 }
 
 void postgresql_statement_backend::alloc()
@@ -50,11 +64,11 @@ void postgresql_statement_backend::alloc()
 
 void postgresql_statement_backend::clean_up()
 {
-    if (result_ != NULL)
-    {
-        PQclear(result_);
-        result_ = NULL;
-    }
+    // 'reset' the value for a 
+    // potential new execution.
+    rowsAffectedBulk_ = -1;
+    
+    // nothing to do here
 }
 
 void postgresql_statement_backend::prepare(std::string const & query,
@@ -94,7 +108,7 @@ void postgresql_statement_backend::prepare(std::string const & query,
                 }
                 // Check whether this is an assignment(e.g. x:=y)
                 // and treat it as a special case, not as a named binding
-                if ((next_it != end) && (*next_it == '='))
+                else if ((next_it != end) && (*next_it == '='))
                 {
                     query_ += ":=";
                     ++it;
@@ -167,26 +181,19 @@ void postgresql_statement_backend::prepare(std::string const & query,
 
     if (stType == st_repeatable_query)
     {
+        assert(statementName_.empty());
+
         // Holding the name temporarily in this var because
         // if it fails to prepare it we can't DEALLOCATE it. 
         std::string statementName = session_.get_next_statement_name();
 
-        PGresult* result = PQprepare(session_.conn_, statementName.c_str(),
-            query_.c_str(), static_cast<int>(names_.size()), NULL);
-        if (result == NULL)
-        {
-            throw soci_error("Cannot prepare statement.");
-        }
+        postgresql_result result(
+            PQprepare(session_.conn_, statementName.c_str(),
+              query_.c_str(), static_cast<int>(names_.size()), NULL));
+        result.check_for_errors("Cannot prepare statement.");
+
         // Now it's safe to save this info.
         statementName_ = statementName;
-        
-        ExecStatusType status = PQresultStatus(result);
-        if (status != PGRES_COMMAND_OK)
-        {
-            // releases result with PQclear
-            throw_postgresql_soci_error(result);
-        }
-        PQclear(result);
     }
 
     stType_ = stType;
@@ -239,7 +246,7 @@ postgresql_statement_backend::execute(int number)
                     "Binding for use elements must be either by position "
                     "or by name.");
             }
-
+            long long rowsAffectedBulkTemp = 0;
             for (int i = 0; i != numberOfExecutions; ++i)
             {
                 std::vector<char *> paramValues;
@@ -290,56 +297,51 @@ postgresql_statement_backend::execute(int number)
 
 #ifdef SOCI_POSTGRESQL_NOPREPARE
 
-                result_ = PQexecParams(session_.conn_, query_.c_str(),
+                result_.reset(PQexecParams(session_.conn_, query_.c_str(),
                     static_cast<int>(paramValues.size()),
-                    NULL, &paramValues[0], NULL, NULL, 0);
+                    NULL, &paramValues[0], NULL, NULL, 0));
 #else
                 if (stType_ == st_repeatable_query)
                 {
                     // this query was separately prepared
 
-                    result_ = PQexecPrepared(session_.conn_,
+                    result_.reset(PQexecPrepared(session_.conn_,
                         statementName_.c_str(),
                         static_cast<int>(paramValues.size()),
-                        &paramValues[0], NULL, NULL, 0);
+                        &paramValues[0], NULL, NULL, 0));
                 }
                 else // stType_ == st_one_time_query
                 {
                     // this query was not separately prepared and should
                     // be executed as a one-time query
 
-                    result_ = PQexecParams(session_.conn_, query_.c_str(),
+                    result_.reset(PQexecParams(session_.conn_, query_.c_str(),
                         static_cast<int>(paramValues.size()),
-                        NULL, &paramValues[0], NULL, NULL, 0);
+                        NULL, &paramValues[0], NULL, NULL, 0));
                 }
 
 #endif // SOCI_POSTGRESQL_NOPREPARE
 
 #endif // SOCI_POSTGRESQL_NOPARAMS
 
-                if (result_ == NULL)
-                {
-                    throw soci_error("Cannot execute query.");
-                }
-
                 if (numberOfExecutions > 1)
                 {
                     // there are only bulk use elements (no intos)
 
-                    ExecStatusType status = PQresultStatus(result_);
-                    if (status != PGRES_COMMAND_OK)
-                    {
-                        // releases result_ with PQclear
-                        throw_postgresql_soci_error(result_);
-                    }
-                    PQclear(result_);
+                    // preserve the number of rows affected so far.
+                    rowsAffectedBulk_ = rowsAffectedBulkTemp;
+                    
+                    result_.check_for_errors("Cannot execute query.");
+                    
+                    rowsAffectedBulkTemp += get_affected_rows();                    
                 }
             }
+            rowsAffectedBulk_ = rowsAffectedBulkTemp;
 
             if (numberOfExecutions > 1)
             {
                 // it was a bulk operation
-                result_ = NULL;
+                result_.reset();
                 return ef_no_data;
             }
 
@@ -352,26 +354,21 @@ postgresql_statement_backend::execute(int number)
 
 #ifdef SOCI_POSTGRESQL_NOPREPARE
 
-            result_ = PQexec(session_.conn_, query_.c_str());
+            result_.reset(PQexec(session_.conn_, query_.c_str()));
 #else
             if (stType_ == st_repeatable_query)
             {
                 // this query was separately prepared
 
-                result_ = PQexecPrepared(session_.conn_,
-                    statementName_.c_str(), 0, NULL, NULL, NULL, 0);
+                result_.reset(PQexecPrepared(session_.conn_,
+                    statementName_.c_str(), 0, NULL, NULL, NULL, 0));
             }
             else // stType_ == st_one_time_query
             {
-                result_ = PQexec(session_.conn_, query_.c_str());
+                result_.reset(PQexec(session_.conn_, query_.c_str()));
             }
 
 #endif // SOCI_POSTGRESQL_NOPREPARE
-
-            if (result_ == NULL)
-            {
-                throw soci_error("Cannot execute query.");
-            }
         }
     }
     else
@@ -384,8 +381,7 @@ postgresql_statement_backend::execute(int number)
         justDescribed_ = false;
     }
 
-    ExecStatusType status = PQresultStatus(result_);
-    if (status == PGRES_TUPLES_OK)
+    if (result_.check_for_data("Cannot execute query."))
     {
         currentRow_ = 0;
         rowsToConsume_ = 0;
@@ -409,17 +405,9 @@ postgresql_statement_backend::execute(int number)
             }
         }
     }
-    else if (status == PGRES_COMMAND_OK)
-    {
-        return ef_no_data;
-    }
     else
     {
-        // releases result_ with PQclear
-        throw_postgresql_soci_error(result_);
-
-        // dummy, never reach
-        return ef_no_data;
+      return ef_no_data;
     }
 }
 
@@ -461,12 +449,18 @@ postgresql_statement_backend::fetch(int number)
 
 long long postgresql_statement_backend::get_affected_rows()
 {
-    const char * resultStr = PQcmdTuples(result_);
+    // PQcmdTuples() doesn't really modify the result but it takes a non-const
+    // pointer to it, so we can't rely on implicit conversion here.
+    const char * const resultStr = PQcmdTuples(result_.get_result());
     char * end;
     long long result = std::strtoll(resultStr, &end, 0);
     if (end != resultStr)
     {
         return result;
+    }
+    else if (rowsAffectedBulk_ >= 0)
+    {
+        return rowsAffectedBulk_;
     }
     else
     {
@@ -550,10 +544,18 @@ void postgresql_statement_backend::describe_column(int colNum, data_type & type,
     
     default:
     {
-        std::stringstream message;
-        message << "unknown data type with typelem: " << typeOid << " for colNum: " << colNum << " with name: " << PQfname(result_, pos);
-        throw soci_error(message.str());
-        
+        int form = PQfformat(result_, pos);
+        int size = PQfsize(result_, pos);
+        if (form == 0 && size == -1)
+        {
+            type = dt_string;
+        }
+        else
+        {
+            std::stringstream message;
+            message << "unknown data type with typelem: " << typeOid << " for colNum: " << colNum << " with name: " << PQfname(result_, pos);
+            throw soci_error(message.str());
+        }
     }
     }
 

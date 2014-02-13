@@ -6,6 +6,7 @@
 //
 
 #define SOCI_POSTGRESQL_SOURCE
+#include <soci-platform.h>
 #include "soci-postgresql.h"
 #include "common.h"
 #include <libpq/libpq-fs.h> // libpq
@@ -17,7 +18,9 @@
 #include <sstream>
 
 #ifdef SOCI_POSTGRESQL_NOPARAMS
+#ifndef SOCI_POSTGRESQL_NOBINDBYNAME
 #define SOCI_POSTGRESQL_NOBINDBYNAME
+#endif // SOCI_POSTGRESQL_NOBINDBYNAME
 #endif // SOCI_POSTGRESQL_NOPARAMS
 
 #ifdef _MSC_VER
@@ -117,7 +120,7 @@ void postgresql_vector_use_type_backend::pre_use(indicator const * ind)
                     std::size_t const bufSize
                         = std::numeric_limits<long long>::digits10 + 3;
                     buf = new char[bufSize];
-                    snprintf(buf, bufSize, "%lld", v[i]);
+                    snprintf(buf, bufSize, "%" LL_FMT_FLAGS "d", v[i]);
                 }
                 break;
             case x_unsigned_long_long:
@@ -129,7 +132,7 @@ void postgresql_vector_use_type_backend::pre_use(indicator const * ind)
                     std::size_t const bufSize
                         = std::numeric_limits<unsigned long long>::digits10 + 2;
                     buf = new char[bufSize];
-                    snprintf(buf, bufSize, "%llu", v[i]);
+                    snprintf(buf, bufSize, "%" LL_FMT_FLAGS "u", v[i]);
                 }
                 break;
             case x_double:

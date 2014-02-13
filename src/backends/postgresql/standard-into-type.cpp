@@ -6,6 +6,7 @@
 //
 
 #define SOCI_POSTGRESQL_SOURCE
+#include <soci-platform.h>
 #include "soci-postgresql.h"
 #include "common.h"
 #include "rowid.h"
@@ -19,7 +20,9 @@
 #include <sstream>
 
 #ifdef SOCI_POSTGRESQL_NOPARAMS
+#ifndef SOCI_POSTGRESQL_NOBINDBYNAME
 #define SOCI_POSTGRESQL_NOBINDBYNAME
+#endif // SOCI_POSTGRESQL_NOBINDBYNAME
 #endif // SOCI_POSTGRESQL_NOPARAMS
 
 using namespace soci;
