@@ -217,6 +217,28 @@ private:
     blob_backend& operator=(blob_backend const&);
 };
 
+// polymorphic clob backend
+
+class clob_backend
+{
+public:
+    clob_backend() {}
+    virtual ~clob_backend() {}
+
+    //virtual std::size_t get_len() = 0;
+    //virtual std::size_t read(std::size_t offset, char* buf,
+    //    std::size_t toRead) = 0;
+    //virtual std::size_t write(std::size_t offset, char const* buf,
+    //    std::size_t toWrite) = 0;
+    //virtual std::size_t append(char const* buf, std::size_t toWrite) = 0;
+    //virtual void trim(std::size_t newLen) = 0;
+
+private:
+    // noncopyable
+    clob_backend(clob_backend const&);
+    clob_backend& operator=(clob_backend const&);
+};
+
 // polymorphic session backend
 
 class session_backend

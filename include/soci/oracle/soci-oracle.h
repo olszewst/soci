@@ -240,6 +240,25 @@ struct oracle_blob_backend : details::blob_backend
     OCILobLocator *lobp_;
 };
 
+struct oracle_clob_backend : details::clob_backend
+{
+    oracle_blob_backend(oracle_session_backend &session);
+
+    ~oracle_blob_backend();
+
+    virtual std::size_t get_len();
+    virtual std::size_t read(std::size_t offset, char *buf,
+        std::size_t toRead);
+    virtual std::size_t write(std::size_t offset, char const *buf,
+        std::size_t toWrite);
+    virtual std::size_t append(char const *buf, std::size_t toWrite);
+    virtual void trim(std::size_t newLen);
+
+    oracle_session_backend &session_;
+
+    OCILobLocator *lobp_;
+};
+
 struct oracle_session_backend : details::session_backend
 {
     oracle_session_backend(std::string const & serviceName,
