@@ -205,13 +205,13 @@ void test_clob_1()
             sessionBackEnd->errhp_, clobBackEnd->lobp_);
 
         sql << "select text from soci_test where id = 7", into(c);
-        assert(b.get_len() == 0);
+        assert(c.get_len() == 0);
 
         // note: clob offsets start from 1
-        b.write(1, buf, sizeof(buf));
-        assert(b.get_len() == sizeof(buf));
-        b.trim(10);
-        assert(b.get_len() == 10);
+        c.write(1, buf, sizeof(buf));
+        assert(c.get_len() == sizeof(buf));
+        c.trim(10);
+        assert(c.get_len() == 10);
 
         // append does not work (Oracle bug #886191 ?)
         //b.append(buf, sizeof(buf));
