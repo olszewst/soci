@@ -3,11 +3,13 @@
 *.kate-swp
 tags
 tmp
+*.orig
 
 # Build directories
 _build*
 src/_build*
 src/build
+out
 
 # Visual Studio
 *.opensdf

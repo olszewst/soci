@@ -221,7 +221,7 @@ void test_clob_1()
 
     {
         clob c(sql);
-        sql << "select img from soci_test where id = 7", into(b);
+        sql << "select img from soci_test where id = 7", into(c);
         //assert(b.get_len() == sizeof(buf) + 10);
         assert(c.get_len() == 10);
         char buf2[100];
