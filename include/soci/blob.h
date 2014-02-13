@@ -36,7 +36,7 @@ public:
     std::size_t append(char const * buf, std::size_t toWrite);
     void trim(std::size_t newLen);
 
-    details::blob_backend * get_backend() { return backEnd_; }
+    virtual details::blob_backend * get_backend() { return backEnd_; }
 
 private:
     details::blob_backend * backEnd_;
