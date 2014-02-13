@@ -48,3 +48,5 @@ void blob::trim(std::size_t newLen)
 {
     backEnd_->trim(newLen);
 }
+
+details::blob_backend * blob::get_backend() { return backEnd_; }

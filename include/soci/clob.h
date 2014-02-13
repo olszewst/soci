@@ -8,9 +8,12 @@
 #ifndef SOCI_CLOB_H_INCLUDED
 #define SOCI_CLOB_H_INCLUDED
 
+#include "soci-backend.h"
 #include "soci-config.h"
+#include "blob.h"
 // std
 #include <cstddef>
+#include <string>
 
 namespace soci
 {
@@ -18,24 +21,19 @@ namespace soci
 
     class session;
 
-    namespace details
-    {
-        class clob_backend;
-    } // namespace details
-
     class SOCI_DECL clob : public blob
     {
     public:
         explicit clob(session & s);
-        ~clob();
+        virtual ~clob();
 
         operator std::string() const;
         clob& operator<<(const std::string& data);
 
-        virtual details::clob_backend * get_backend() { return backEnd_; }
+        details::clob_backend* get_backend() override;
 
     private:
-        details::clob_backend * backEnd_;
+        details::clob_backend* clobBackEnd_;
     };
 
 } // namespace soci

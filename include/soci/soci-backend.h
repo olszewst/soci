@@ -219,7 +219,7 @@ private:
 
 // polymorphic clob backend
 
-class clob_backend
+class clob_backend : public blob_backend
 {
 public:
     clob_backend() {}
