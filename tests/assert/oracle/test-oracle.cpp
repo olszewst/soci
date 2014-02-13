@@ -170,6 +170,68 @@ void test3()
     std::cout << "test 3 passed" << std::endl;
 }
 
+struct clob_table_creator : public table_creator_base
+{
+    clob_table_creator(session & sql)
+        : table_creator_base(sql)
+    {
+        sql <<
+            "create table soci_test ("
+            "    id number(10) not null,"
+            "    text clob"
+            ")";
+    }
+};
+
+void test_clob_1()
+{
+    session sql(backEnd, connectString);
+
+    clob_table_creator tableCreator(sql);
+
+    char buf[] = "abcdefghijklmnopqrstuvwxyz";
+    sql << "insert into soci_test (id, img) values (7, empty_clob())";
+
+    {
+        clob c(sql);
+
+        oracle_session_backend *sessionBackEnd
+            = static_cast<oracle_session_backend *>(sql.get_backend());
+
+        oracle_blob_backend *clobBackEnd
+            = static_cast<oracle_blob_backend *>(c.get_backend());
+
+        OCILobDisableBuffering(sessionBackEnd->svchp_,
+            sessionBackEnd->errhp_, clobBackEnd->lobp_);
+
+        sql << "select text from soci_test where id = 7", into(c);
+        assert(b.get_len() == 0);
+
+        // note: clob offsets start from 1
+        b.write(1, buf, sizeof(buf));
+        assert(b.get_len() == sizeof(buf));
+        b.trim(10);
+        assert(b.get_len() == 10);
+
+        // append does not work (Oracle bug #886191 ?)
+        //b.append(buf, sizeof(buf));
+        //assert(b.get_len() == sizeof(buf) + 10);
+        sql.commit();
+    }
+
+    {
+        clob c(sql);
+        sql << "select img from soci_test where id = 7", into(b);
+        //assert(b.get_len() == sizeof(buf) + 10);
+        assert(c.get_len() == 10);
+        char buf2[100];
+        c.read(1, buf2, 10);
+        assert(strncmp(buf2, "abcdefghij", 10) == 0);
+    }
+
+    std::cout << "test clob_1 passed" << std::endl;
+}
+
 // nested statement test
 // (the same syntax is used for output cursors in PL/SQL)
 
