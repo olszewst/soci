@@ -214,3 +214,8 @@ oracle_blob_backend * oracle_session_backend::make_blob_backend()
 {
     return new oracle_blob_backend(*this);
 }
+
+oracle_clob_backend * oracle_session_backend::make_clob_backend()
+{
+    return new oracle_clob_backend(*this);
+}

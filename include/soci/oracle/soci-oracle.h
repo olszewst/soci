@@ -240,23 +240,27 @@ struct oracle_blob_backend : details::blob_backend
     OCILobLocator *lobp_;
 };
 
-struct oracle_clob_backend : details::clob_backend
+struct oracle_clob_backend : public details::clob_backend
 {
-    oracle_blob_backend(oracle_session_backend &session);
+    oracle_blob_backend blobBackEnd_;
 
-    ~oracle_blob_backend();
+    oracle_clob_backend(oracle_session_backend &session);
 
+    ~oracle_clob_backend();
+
+       
     virtual std::size_t get_len();
     virtual std::size_t read(std::size_t offset, char *buf,
-        std::size_t toRead);
+    std::size_t toRead);
     virtual std::size_t write(std::size_t offset, char const *buf,
-        std::size_t toWrite);
+    std::size_t toWrite);
     virtual std::size_t append(char const *buf, std::size_t toWrite);
     virtual void trim(std::size_t newLen);
-
+    /*
     oracle_session_backend &session_;
 
     OCILobLocator *lobp_;
+    */
 };
 
 struct oracle_session_backend : details::session_backend
@@ -280,6 +284,7 @@ struct oracle_session_backend : details::session_backend
     virtual oracle_statement_backend * make_statement_backend();
     virtual oracle_rowid_backend * make_rowid_backend();
     virtual oracle_blob_backend * make_blob_backend();
+    virtual oracle_clob_backend * make_clob_backend();
 
     bool get_option_decimals_as_strings() { return decimals_as_strings_; }
 

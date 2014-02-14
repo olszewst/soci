@@ -40,9 +40,9 @@ oracle_blob_backend::~oracle_blob_backend()
 
 std::size_t oracle_blob_backend::get_len()
 {
-    ub4 len;
+    ub8 len;
 
-    sword res = OCILobGetLength(session_.svchp_, session_.errhp_,
+    sword res = OCILobGetLength2(session_.svchp_, session_.errhp_,
         lobp_, &len);
 
     if (res != OCI_SUCCESS)

@@ -16,6 +16,8 @@
 #include "backend-loader.h"
 #include "blob.h"
 #include "blob-exchange.h"
+#include "clob.h"
+#include "clob-exchange.h"
 #include "connection-pool.h"
 #include "error.h"
 #include "exchange-traits.h"

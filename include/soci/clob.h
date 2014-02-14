@@ -30,7 +30,7 @@ namespace soci
         operator std::string() const;
         clob& operator<<(const std::string& data);
 
-        details::clob_backend* get_backend() override;
+        virtual details::clob_backend* get_backend();
 
     private:
         details::clob_backend* clobBackEnd_;

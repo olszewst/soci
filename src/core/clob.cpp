@@ -24,7 +24,7 @@ clob::~clob()
     delete clobBackEnd_;
 }
 
-details::clob_backend * get_backend() override
+details::clob_backend * clob::get_backend()
 { 
     return clobBackEnd_; 
 }

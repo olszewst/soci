@@ -190,19 +190,34 @@ void test_clob_1()
     clob_table_creator tableCreator(sql);
 
     char buf[] = "abcdefghijklmnopqrstuvwxyz";
-    sql << "insert into soci_test (id, img) values (7, empty_clob())";
+    sql << "insert into soci_test (id, text) values (73, empty_clob())";
+    sql << "insert into soci_test (id, text) values (7, TO_CLOB('My_name is rajuvan'))";
+    sql.commit();
 
+//    return;
     {
+        blob b(sql);
+
+        /*oracle_session_backend *sessionBackEnd
+            = static_cast<oracle_session_backend *>(sql.get_backend());
+
+        oracle_clob_backend *clobBackEnd
+            = static_cast<oracle_clob_backend *>(c.get_backend());
+*/
+        //OCILobDisableBuffering(sessionBackEnd->svchp_, sessionBackEnd->errhp_, clobBackEnd->blobBackEnd_.lobp_);
+
+        sql << "select text from soci_test where id = 7", into(b);
+        assert(b.get_len() == 0);
+
         clob c(sql);
 
         oracle_session_backend *sessionBackEnd
             = static_cast<oracle_session_backend *>(sql.get_backend());
 
-        oracle_blob_backend *clobBackEnd
-            = static_cast<oracle_blob_backend *>(c.get_backend());
+        oracle_clob_backend *clobBackEnd
+            = static_cast<oracle_clob_backend *>(c.get_backend());
 
-        OCILobDisableBuffering(sessionBackEnd->svchp_,
-            sessionBackEnd->errhp_, clobBackEnd->lobp_);
+        //OCILobDisableBuffering(sessionBackEnd->svchp_, sessionBackEnd->errhp_, clobBackEnd->blobBackEnd_.lobp_);
 
         sql << "select text from soci_test where id = 7", into(c);
         assert(c.get_len() == 0);
@@ -1253,7 +1268,7 @@ int main(int argc, char** argv)
     _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
     _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
 #endif //_MSC_VER
-
+    
     if (argc == 2)
     {
         connectString = argv[1];
@@ -1267,8 +1282,14 @@ int main(int argc, char** argv)
         std::exit(1);
     }
 
+
     try
     {
+
+        test_clob_1();
+
+        return 0;
+
         test_context tc(backEnd, connectString);
         common_tests tests(tc);
         tests.run();

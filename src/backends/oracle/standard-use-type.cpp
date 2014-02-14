@@ -8,6 +8,7 @@
 #define soci_ORACLE_SOURCE
 #include "soci-oracle.h"
 #include "blob.h"
+#include "clob.h"
 #include "error.h"
 #include "rowid.h"
 #include "statement.h"
@@ -133,6 +134,19 @@ void oracle_standard_use_type_backend::prepare_for_bind(
 
             size = 0;
             data = &bbe->lobp_;
+        }
+        break;
+    case x_clob:
+        {
+            oracleType = SQLT_CLOB;
+
+            clob *c = static_cast<clob *>(data);
+
+            oracle_clob_backend *cbe
+                = static_cast<oracle_clob_backend *>(c->get_backend());
+
+            size = 0;
+            data = &cbe->blobBackEnd_.lobp_;
         }
         break;
     }
@@ -275,6 +289,7 @@ void oracle_standard_use_type_backend::pre_use(indicator const *ind)
         break;
     case x_rowid:
     case x_blob:
+    case x_clob:
         // nothing to do
         break;
     }
@@ -435,6 +450,7 @@ void oracle_standard_use_type_backend::post_use(bool gotData, indicator *ind)
             break;
         case x_rowid:
         case x_blob:
+        case x_clob:
             // nothing to do here
             break;
         }

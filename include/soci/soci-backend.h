@@ -45,7 +45,8 @@ enum exchange_type
     x_stdtm,
     x_statement,
     x_rowid,
-    x_blob
+    x_blob,
+    x_clob
 };
 
 // type of statement (used for optimizing statement preparation)
@@ -271,6 +272,7 @@ public:
     virtual statement_backend* make_statement_backend() = 0;
     virtual rowid_backend* make_rowid_backend() = 0;
     virtual blob_backend* make_blob_backend() = 0;
+    virtual clob_backend* make_clob_backend() = 0;
 
 private:
     // noncopyable
