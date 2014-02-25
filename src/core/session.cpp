@@ -390,10 +390,3 @@ blob_backend * session::make_blob_backend()
 
     return backEnd_->make_blob_backend();
 }
-
-clob_backend * session::make_clob_backend()
-{
-    ensureConnected(backEnd_);
-
-    return backEnd_->make_clob_backend();
-}

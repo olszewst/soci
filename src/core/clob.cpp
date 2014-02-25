@@ -16,15 +16,4 @@ using namespace soci;
 clob::clob(session & s)
     : blob(s)
 {
-    clobBackEnd_ = s.make_clob_backend();
-}
-
-clob::~clob()
-{
-    delete clobBackEnd_;
-}
-
-details::clob_backend * clob::get_backend()
-{ 
-    return clobBackEnd_; 
 }

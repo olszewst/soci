@@ -170,7 +170,6 @@ struct empty_session_backend : details::session_backend
     empty_statement_backend* make_statement_backend();
     empty_rowid_backend* make_rowid_backend();
     empty_blob_backend* make_blob_backend();
-    details::clob_backend* make_clob_backend(){return nullptr;}
 };
 
 struct SOCI_EMPTY_DECL empty_backend_factory : backend_factory

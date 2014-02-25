@@ -130,8 +130,9 @@ void oracle_standard_into_type_backend::define_by_pos(
         }
         break;
     case x_blob:
+    case x_clob:
         {
-            oracleType = SQLT_BLOB;
+            oracleType = type_ == x_blob ? SQLT_BLOB : SQLT_CLOB;
 
             blob *b = static_cast<blob *>(data);
 
@@ -140,19 +141,6 @@ void oracle_standard_into_type_backend::define_by_pos(
 
             size = 0;
             data = &bbe->lobp_;
-        }
-        break;
-    case x_clob:
-        {
-            oracleType = SQLT_CLOB;
-
-            clob *c = static_cast<clob *>(data);
-
-            oracle_clob_backend *cbe
-                = static_cast<oracle_clob_backend *>(c->get_backend());
-
-            size = 0;
-            data = &cbe->blobBackEnd_.lobp_;
         }
         break;
     }

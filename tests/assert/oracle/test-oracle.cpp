@@ -190,34 +190,19 @@ void test_clob_1()
     clob_table_creator tableCreator(sql);
 
     char buf[] = "abcdefghijklmnopqrstuvwxyz";
-    sql << "insert into soci_test (id, text) values (73, empty_clob())";
-    sql << "insert into soci_test (id, text) values (7, TO_CLOB('My_name is rajuvan'))";
-    sql.commit();
-
-//    return;
+    sql << "insert into soci_test (id, text) values (7, empty_clob())";
+    //sql << "insert into soci_test (id, text) values (7, TO_CLOB('clob test'))";
+    //sql.commit();
     {
-        blob b(sql);
-
-        /*oracle_session_backend *sessionBackEnd
-            = static_cast<oracle_session_backend *>(sql.get_backend());
-
-        oracle_clob_backend *clobBackEnd
-            = static_cast<oracle_clob_backend *>(c.get_backend());
-*/
-        //OCILobDisableBuffering(sessionBackEnd->svchp_, sessionBackEnd->errhp_, clobBackEnd->blobBackEnd_.lobp_);
-
-        sql << "select text from soci_test where id = 7", into(b);
-        assert(b.get_len() == 0);
-
         clob c(sql);
 
         oracle_session_backend *sessionBackEnd
             = static_cast<oracle_session_backend *>(sql.get_backend());
 
-        oracle_clob_backend *clobBackEnd
-            = static_cast<oracle_clob_backend *>(c.get_backend());
+        oracle_blob_backend *blobBackEnd
+            = static_cast<oracle_blob_backend *>(c.get_backend());
 
-        //OCILobDisableBuffering(sessionBackEnd->svchp_, sessionBackEnd->errhp_, clobBackEnd->blobBackEnd_.lobp_);
+        OCILobDisableBuffering(sessionBackEnd->svchp_, sessionBackEnd->errhp_, blobBackEnd->lobp_);
 
         sql << "select text from soci_test where id = 7", into(c);
         assert(c.get_len() == 0);
@@ -236,12 +221,12 @@ void test_clob_1()
 
     {
         clob c(sql);
-        sql << "select img from soci_test where id = 7", into(c);
+        sql << "select text from soci_test where id = 7", into(c);
         //assert(b.get_len() == sizeof(buf) + 10);
         assert(c.get_len() == 10);
         char buf2[100];
         c.read(1, buf2, 10);
-        assert(strncmp(buf2, "abcdefghij", 10) == 0);
+        assert(strncmp(buf2, buf, 10) == 0);
     }
 
     std::cout << "test clob_1 passed" << std::endl;

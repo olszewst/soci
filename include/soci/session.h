@@ -121,7 +121,6 @@ public:
     details::statement_backend * make_statement_backend();
     details::rowid_backend * make_rowid_backend();
     details::blob_backend * make_blob_backend();
-    details::clob_backend * make_clob_backend();
 
 private:
     session(session const &);

@@ -25,15 +25,10 @@ namespace soci
     {
     public:
         explicit clob(session & s);
-        virtual ~clob();
 
         operator std::string() const;
         clob& operator<<(const std::string& data);
 
-        virtual details::clob_backend* get_backend();
-
-    private:
-        details::clob_backend* clobBackEnd_;
     };
 
 } // namespace soci
